@@ -7,61 +7,63 @@ function cargarCursos() {
     .then(data => {
       cursos = data;
       renderCursos();
+    })
+    .catch(err => {
+      console.error("Error al cargar cursos.json:", err);
+      document.getElementById("cursos-container").innerHTML = "<p style='color:red;'>No se pudo cargar cursos.json.</p>";
     });
-}
-
-function estaDesbloqueado(curso) {
-  if (curso.requisitos.length === 0) return true;
-  if (curso.requisitos.includes("TODOS XI")) return verificarTodosCiclos(11);
-  if (curso.requisitos.includes("TODOS XII")) return verificarTodosCiclos(12);
-  return curso.requisitos.every(reqNombre => {
-    const cursoReq = cursos.find(c => c.nombre === reqNombre);
-    return cursoReq && cursosAprobados.has(cursoReq.id);
-  });
-}
-
-function verificarTodosCiclos(cicloMax) {
-  const cursosDelCiclo = cursos.filter(c => c.ciclo <= cicloMax);
-  return cursosDelCiclo.every(c => cursosAprobados.has(c.id));
 }
 
 function renderCursos() {
-  const contenedor = document.getElementById("contenedor-cursos");
-  contenedor.innerHTML = "";
-  cursos.forEach(curso => {
-    const aprobado = cursosAprobados.has(curso.id);
-    const desbloqueado = estaDesbloqueado(curso);
+  const container = document.getElementById("cursos-container");
+  container.innerHTML = "";
 
-    const div = document.createElement("div");
-    div.className = "curso";
-    if (desbloqueado) div.classList.add("desbloqueado");
-    else div.classList.add("bloqueado");
+  const ciclos = [...new Set(cursos.map(c => c.ciclo))].sort((a, b) => a - b);
 
-    div.innerHTML = `
-      <h2>${curso.nombre}</h2>
-      <p class="ciclo">Ciclo ${curso.ciclo}</p>
-      <label>
-        <input type="checkbox" ${aprobado ? "checked" : ""} ${!desbloqueado ? "disabled" : ""}>
-        Marcar como aprobado
-      </label>
-    `;
+  ciclos.forEach(ciclo => {
+    const divCiclo = document.createElement("div");
+    divCiclo.classList.add("ciclo");
+    divCiclo.innerHTML = `<h2>Ciclo ${ciclo}</h2>`;
 
-    const checkbox = div.querySelector("input");
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) cursosAprobados.add(curso.id);
-      else cursosAprobados.delete(curso.id);
-      localStorage.setItem("aprobados", JSON.stringify([...cursosAprobados]));
-      renderCursos(); // Volver a renderizar para actualizar desbloqueo
-    });
+    cursos
+      .filter(c => c.ciclo === ciclo)
+      .forEach(curso => {
+        const cumplidos = curso.requisitos.every(req => cursosAprobados.has(req));
+        const divCurso = document.createElement("div");
+        divCurso.classList.add("curso");
+        if (!cumplidos) divCurso.classList.add("disabled");
 
-    contenedor.appendChild(div);
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = cursosAprobados.has(curso.nombre);
+        checkbox.disabled = !cumplidos;
+
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            cursosAprobados.add(curso.nombre);
+          } else {
+            cursosAprobados.delete(curso.nombre);
+          }
+          localStorage.setItem("aprobados", JSON.stringify([...cursosAprobados]));
+          renderCursos();
+        });
+
+        const label = document.createElement("label");
+        label.textContent = curso.nombre;
+
+        divCurso.appendChild(checkbox);
+        divCurso.appendChild(label);
+        divCiclo.appendChild(divCurso);
+      });
+
+    container.appendChild(divCiclo);
   });
 }
 
 document.getElementById("reset").addEventListener("click", () => {
   localStorage.removeItem("aprobados");
   cursosAprobados.clear();
-  renderCursos();
+  cargarCursos();
 });
 
 cargarCursos();
