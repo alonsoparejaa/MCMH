@@ -3,23 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Malla Curricular Interactiva</title>
+  <title>Malla Curricular de Medicina</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
+  <div class="container">
     <h1>Malla Curricular de Medicina</h1>
     <p>Marca los cursos aprobados para desbloquear los siguientes</p>
-  </header>
-
-  <main id="contenedor-cursos">
-    <!-- Los cursos se cargarán dinámicamente aquí -->
-  </main>
-
-  <footer>
     <button id="reset">Reiniciar progreso</button>
-  </footer>
-
-  <script src="script.js"></script>
+    <div id="cursos-container"></div>
+  </div>
+  <script src="script.js" defer></script>
 </body>
 </html>
