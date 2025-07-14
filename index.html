@@ -5,6 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Malla Curricular de Medicina</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f7f9fc;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    #reset {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      background-color: #d63031;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #reset:hover {
+      background-color: #b71c1c;
+    }
+
+    .ciclo {
+      margin-top: 40px;
+    }
+
+    .ciclo h2 {
+      background-color: #2c3e50;
+      color: #ecf0f1;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .cursos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 15px;
+    }
+
+    .curso {
+      background: #ecf0f1;
+      border-radius: 8px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .curso:hover {
+      background-color: #d0dce5;
+    }
+
+    .curso.aprobado {
+      background-color: #2ecc71;
+      color: white;
+    }
+
+    .curso.disabled {
+      background-color: #bdc3c7;
+      color: #7f8c8d;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -13,6 +99,80 @@
     <button id="reset">Reiniciar progreso</button>
     <div id="cursos-container"></div>
   </div>
-  <script src="script.js" defer></script>
+
+  <script>
+    let cursos = [];
+    const cursosAprobados = new Set(JSON.parse(localStorage.getItem("aprobados") || "[]"));
+
+    function cargarCursos() {
+      fetch("cursos.json")
+        .then(res => res.json())
+        .then(data => {
+          cursos = data;
+          renderCursos();
+        })
+        .catch(err => {
+          document.getElementById("cursos-container").innerHTML =
+            "<p style='color:red;'>No se pudo cargar cursos.json</p>";
+        });
+    }
+
+    function renderCursos() {
+      const container = document.getElementById("cursos-container");
+      container.innerHTML = "";
+
+      const ciclos = [...new Set(cursos.map(c => c.ciclo))].sort((a, b) => a - b);
+
+      ciclos.forEach(ciclo => {
+        const divCiclo = document.createElement("div");
+        divCiclo.className = "ciclo";
+
+        const h2 = document.createElement("h2");
+        h2.textContent = `Ciclo ${ciclo}`;
+        divCiclo.appendChild(h2);
+
+        const grid = document.createElement("div");
+        grid.className = "cursos-grid";
+
+        cursos.filter(c => c.ciclo === ciclo).forEach(curso => {
+          const cumplidos = curso.requisitos.every(req => cursosAprobados.has(req));
+          const divCurso = document.createElement("div");
+          divCurso.className = "curso";
+          divCurso.textContent = curso.nombre;
+
+          if (cursosAprobados.has(curso.nombre)) {
+            divCurso.classList.add("aprobado");
+          } else if (!cumplidos) {
+            divCurso.classList.add("disabled");
+          }
+
+          if (cumplidos || cursosAprobados.has(curso.nombre)) {
+            divCurso.addEventListener("click", () => {
+              if (cursosAprobados.has(curso.nombre)) {
+                cursosAprobados.delete(curso.nombre);
+              } else {
+                cursosAprobados.add(curso.nombre);
+              }
+              localStorage.setItem("aprobados", JSON.stringify([...cursosAprobados]));
+              renderCursos();
+            });
+          }
+
+          grid.appendChild(divCurso);
+        });
+
+        divCiclo.appendChild(grid);
+        container.appendChild(divCiclo);
+      });
+    }
+
+    document.getElementById("reset").addEventListener("click", () => {
+      localStorage.removeItem("aprobados");
+      cursosAprobados.clear();
+      cargarCursos();
+    });
+
+    cargarCursos();
+  </script>
 </body>
 </html>
